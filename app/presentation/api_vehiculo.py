@@ -65,6 +65,13 @@ async def modificar_vehiculo_parcial(vehiculo_id: str, vehiculo: VehiculoActuali
     
     return Vehiculo.model_validate(vehiculo_dict)
 
+@router.get("/vehiculo/{vehiculo_placa}", response_model=Vehiculo, tags=["Vehiculo"])
+async def obtener_vehiculo(vehiculo_placa: str, db: Session = Depends(get_db)):
+    db_vehiculo = db.query(VehiculoModelo).filter(VehiculoModelo.placa == vehiculo_placa).first()
+    if not db_vehiculo:
+        raise HTTPException(status_code=404, detail="Vehículo no encontrado.")
+    return Vehiculo.model_validate(db_vehiculo.__dict__)
+
 @router.delete("/vehiculo/{vehiculo_id}", response_model=dict, tags=["Vehiculo"])
 async def eliminar_vehiculo(vehiculo_id: str, db: Session = Depends(get_db)):
     db_vehiculo = db.query(VehiculoModelo).filter(VehiculoModelo.placa == vehiculo_id).first()
@@ -73,10 +80,3 @@ async def eliminar_vehiculo(vehiculo_id: str, db: Session = Depends(get_db)):
     db.delete(db_vehiculo)
     db.commit()
     return {"detail": "Vehículo eliminado exitosamente."}
-
-@router.get("/vehiculo/{vehiculo_placa}", response_model=Vehiculo, tags=["Vehiculo"])
-async def obtener_vehiculo(vehiculo_placa: str, db: Session = Depends(get_db)):
-    db_vehiculo = db.query(VehiculoModelo).filter(VehiculoModelo.placa == vehiculo_placa).first()
-    if not db_vehiculo:
-        raise HTTPException(status_code=404, detail="Vehículo no encontrado.")
-    return Vehiculo.model_validate(db_vehiculo.__dict__)

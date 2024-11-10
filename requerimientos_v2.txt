@@ -1,0 +1,62 @@
+	1.	Crea un API con FastAPI que incluya los objetos: Vehículo, Ruta, Conductor, y Trayecto.
+	•	Cada objeto debe tener su propio archivo y módulo independiente.
+	•	La estructura del código debe seguir el formato ya creado para el objeto Vehículo.
+	2.	Detalles específicos para cada objeto
+Ruta
+	•	Crear el objeto Ruta con los siguientes atributos:
+	•	Id: único y autogenerado usando UUID.
+	•	Nombre: String (nombre de la ruta).
+	•	Código: String (código identificador único de la ruta).
+	•	Origen: String (punto de inicio de la ruta).
+	•	Destino: String (punto final de la ruta).
+	•	Duración estimada: Integer (en minutos).
+	•	Casos de uso para el objeto Ruta:
+	•	Listar rutas.
+	•	Crear ruta.
+	•	Modificar ruta.
+	•	Modificar ruta parcial.
+	•	Eliminar ruta.
+	•	Obtener ruta.
+Conductor
+	•	Crear el objeto Conductor con los siguientes atributos:
+	•	Id: único y autogenerado usando UUID.
+	•	Nombre completo: String (nombre completo del conductor).
+	•	Cédula: String (número de identificación único).
+	•	Licencia de conducción: String (número de la licencia).
+	•	Teléfono de contacto: String.
+	•	Estado activo: Boolean (indica si el conductor está disponible).
+	•	Casos de uso para el objeto Conductor:
+	•	Listar conductores.
+	•	Crear conductor.
+	•	Modificar conductor.
+	•	Modificar conductor parcial.
+	•	Eliminar conductor.
+	•	Obtener conductor.
+Trayecto
+	•	Crear el objeto Trayecto con los siguientes atributos:
+	•	Id: único y autogenerado usando UUID.
+	•	Fecha: Date (fecha del trayecto).
+	•	Hora de salida: Time (hora de inicio del trayecto).
+	•	Hora de llegada: Time (hora de finalización del trayecto).
+	•	Cantidad de pasajeros: Integer.
+	•	Kilometraje: Integer (distancia recorrida en kilómetros).
+	•	Observaciones: String (comentarios opcionales sobre el trayecto).
+	•	Casos de uso para el objeto Trayecto:
+	•	Listar trayectos.
+	•	Crear trayecto.
+	•	Modificar trayecto.
+	•	Modificar trayecto parcial.
+	•	Eliminar trayecto.
+	•	Obtener trayecto.
+	3.	Base de datos y ORM
+	•	Usa SQLite como base de datos.
+	•	Utiliza SQLAlchemy como ORM para definir y manipular los modelos de datos.
+	4.	Estructura de proyecto con arquitectura limpia (Clean Architecture)
+	•	Mantén una estructura modular, separando modelos, controladores, y endpoints en archivos independientes para cada objeto (Vehículo, Ruta, Conductor, y Trayecto).
+	5.	Ambiente y dependencias
+	•	Utiliza un entorno virtual (venv) para el proyecto.
+	•	Asegúrate de incluir las siguientes dependencias en el requirements.txt:
+	•	fastapi[standard]
+	•	uvicorn
+	•	sqlalchemy
+	•	pydantic
