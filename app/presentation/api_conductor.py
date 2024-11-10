@@ -27,7 +27,7 @@ def leer_conductores(db: Session = Depends(get_db)):
     conductores = db.query(ConductorModelo).all()
     return [Conductor.model_validate(conductor.__dict__) for conductor in conductores]
 
-@router.put("/conductores/{conductor_id}", response_model=Conductor, tags=["Conductores"])
+@router.put("/conductor/{conductor_id}", response_model=Conductor, tags=["Conductores"])
 async def modificar_conductor(conductor_id: str, conductor: Conductor, db: Session = Depends(get_db)):
     db_conductor = db.query(ConductorModelo).filter(ConductorModelo.id == conductor_id).first()
     if not db_conductor:
@@ -38,7 +38,7 @@ async def modificar_conductor(conductor_id: str, conductor: Conductor, db: Sessi
     conductor_dict = {k: getattr(db_conductor, k) for k in Conductor.model_fields.keys()}
     return Conductor.model_validate(db_conductor.__dict__)
 
-@router.patch("/conductores/{conductor_id}", response_model=Conductor, tags=["Conductores"])
+@router.patch("/conductor/{conductor_id}", response_model=Conductor, tags=["Conductores"])
 async def modificar_conductor_parcial(conductor_id: str, conductor: ConductorActualizar, db: Session = Depends(get_db)):
     db_conductor = db.query(ConductorModelo).filter(ConductorModelo.id == conductor_id).first()
     if not db_conductor:
@@ -63,14 +63,14 @@ async def modificar_conductor_parcial(conductor_id: str, conductor: ConductorAct
     
     return Conductor.model_validate(conductor_dict)
 
-@router.get("/conductores/{conductor_placa}", response_model=Conductor, tags=["Conductores"])
+@router.get("/conductor/{conductor_placa}", response_model=Conductor, tags=["Conductores"])
 async def obtener_conductor(conductor_placa: str, db: Session = Depends(get_db)):
     db_conductor = db.query(ConductorModelo).filter(ConductorModelo.placa == conductor_placa).first()
     if not db_conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado.")
     return Conductor.model_validate(db_conductor.__dict__)
 
-@router.delete("/conductores/{conductor_id}", response_model=dict, tags=["Conductores"])
+@router.delete("/conductor/{conductor_id}", response_model=dict, tags=["Conductores"])
 async def eliminar_conductor(conductor_id: str, db: Session = Depends(get_db)):
     db_conductor = db.query(ConductorModelo).filter(ConductorModelo.placa == conductor_id).first()
     if not db_conductor:

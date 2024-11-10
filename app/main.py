@@ -3,14 +3,17 @@ from app.data.database import engine
 from app.domain.models.vehiculo import Base as VehiculoBase
 from app.domain.models.ruta import Base as RutaBase
 from app.domain.models.conductor import Base as ConductorBase
+from app.domain.models.trayecto import Base as TrayectoBase
 from app.presentation.api_vehiculo import router as vehiculo_router
 from app.presentation.api_ruta import router as ruta_router
 from app.presentation.api_conductor import router as conductor_router
+from app.presentation.api_trayecto import router as trayecto_router
 
 # Crear todas las tablas en la base de datos
 VehiculoBase.metadata.create_all(bind=engine)
 RutaBase.metadata.create_all(bind=engine)
 ConductorBase.metadata.create_all(bind=engine)
+TrayectoBase.metadata.create_all(bind=engine)
 
 # Inicializar la aplicación FastAPI
 app = FastAPI()
@@ -19,6 +22,7 @@ app = FastAPI()
 app.include_router(vehiculo_router)
 app.include_router(ruta_router)
 app.include_router(conductor_router)
+app.include_router(trayecto_router)
 
 if __name__ == "__main__":
     import uvicorn
