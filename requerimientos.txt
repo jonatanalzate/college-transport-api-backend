@@ -1,0 +1,33 @@
+Vas a crear un API en FastAPI[standard] para un sistema de gestión de transporte que permita manejar la información de vehículos.
+El proyecto debe usar una base de datos SQL (SQLite) y utilizar un ORM (SQLAlchemy) para manejar las operaciones de la base de datos. 
+Utilizaremos Clean Architecture para organizar el código y evitaremos operaciones asíncronas.
+Crea un entorno virtual (venv) y activa el entorno para instalar estas dependencias.
+
+Instalación y configuración de entorno:
+
+Para este proyecto, instala los siguientes paquetes y configura un entorno virtual:
+
+	•	FastAPI[standard]: para la creación de la API
+	•	uvicorn: para ejecutar el servidor de desarrollo
+	•	SQLAlchemy: como ORM para la base de datos
+	•	Pydantic: para la validación de modelos de datos
+	•	UUID: para la generación de identificadores únicos
+
+Objeto vehículo:
+
+	•	Id: único y autogenerado usando UUID
+	•	Marca: String
+	•	Placa: String
+	•	Modelo: String
+	•	Lateral: String (código de identificación en la flota)
+	•	Año de fabricación: Integer
+	•	Capacidad de pasajeros: Integer
+	•	Estado operativo: String (puede ser “activo”, “en mantenimiento” o “fuera de servicio”)
+
+Casos de Uso:
+
+	•	Caso de Uso: Crear vehículo
+    •	Caso de Uso: Listar vehículo
+    •	Caso de Uso: Modificar vehículo
+    •	Caso de Uso: Eliminar vehículo
+    •	Caso de Uso: Obtener vehículo
