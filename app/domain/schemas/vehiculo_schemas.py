@@ -7,7 +7,7 @@ class VehiculoCrear(BaseModel):
     placa: str
     modelo: str
     lateral: str
-    año_de_fabricación: int
+    año_de_fabricacion: int
     capacidad_pasajeros: int
     estado_operativo: str
 
@@ -17,7 +17,7 @@ class Vehiculo(BaseModel):
     placa: str
     modelo: str
     lateral: str
-    año_de_fabricación: int
+    año_de_fabricacion: int
     capacidad_pasajeros: int
     estado_operativo: str
 
@@ -26,6 +26,6 @@ class VehiculoActualizar(BaseModel):
     placa: Optional[str] = None
     modelo: Optional[str] = None
     lateral: Optional[str] = None
-    año_de_fabricación: Optional[int] = None
+    año_de_fabricacion: Optional[int] = None
     capacidad_pasajeros: Optional[int] = None
     estado_operativo: Optional[str] = None

@@ -24,8 +24,8 @@ def crear_vehiculos(vehiculos: List[VehiculoCrear], db: Session = Depends(get_db
 
 @router.get("/vehiculos/", response_model=List[Vehiculo], tags=["Vehiculo"])
 def leer_vehiculos(db: Session = Depends(get_db)):
-    vehicles = db.query(VehiculoModelo).all()
-    return [Vehiculo.model_validate(vehiculo.__dict__) for vehiculo in vehicles]
+    vehiculos = db.query(VehiculoModelo).all()
+    return [Vehiculo.model_validate(vehiculo.__dict__) for vehiculo in vehiculos]
 
 @router.put("/vehiculo/{vehiculo_id}", response_model=Vehiculo, tags=["Vehiculo"])
 async def modificar_vehiculo(vehiculo_id: str, vehiculo: Vehiculo, db: Session = Depends(get_db)):
@@ -58,7 +58,7 @@ async def modificar_vehiculo_parcial(vehiculo_id: str, vehiculo: VehiculoActuali
         "placa": db_vehiculo.placa,
         "modelo": db_vehiculo.modelo,
         "lateral": db_vehiculo.lateral,
-        "año_de_fabricación": db_vehiculo.año_de_fabricación,
+        "año_de_fabricacion": db_vehiculo.año_de_fabricacion,
         "capacidad_pasajeros": db_vehiculo.capacidad_pasajeros,
         "estado_operativo": db_vehiculo.estado_operativo,
     }
