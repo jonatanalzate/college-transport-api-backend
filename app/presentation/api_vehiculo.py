@@ -74,7 +74,7 @@ async def obtener_vehiculo(vehiculo_placa: str, db: Session = Depends(get_db)):
 
 @router.delete("/vehiculo/{vehiculo_id}", response_model=dict, tags=["Vehiculo"])
 async def eliminar_vehiculo(vehiculo_id: str, db: Session = Depends(get_db)):
-    db_vehiculo = db.query(VehiculoModelo).filter(VehiculoModelo.placa == vehiculo_id).first()
+    db_vehiculo = db.query(VehiculoModelo).filter(VehiculoModelo.id == vehiculo_id).first()
     if not db_vehiculo:
         raise HTTPException(status_code=404, detail="Vehículo no encontrado.")
     db.delete(db_vehiculo)

@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.data.database import engine
 from app.domain.models.vehiculo import Base as VehiculoBase
 from app.domain.models.ruta import Base as RutaBase
@@ -17,6 +18,15 @@ TrayectoBase.metadata.create_all(bind=engine)
 
 # Inicializar la aplicación FastAPI
 app = FastAPI()
+
+# Se agrega el middleware CORS en el backend para permitir las peticiones desde el frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # URL de tu frontend
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos los métodos HTTP
+    allow_headers=["*"],  # Permite todos los headers
+)
 
 # Incluir los routers de los endpoints
 app.include_router(vehiculo_router)
