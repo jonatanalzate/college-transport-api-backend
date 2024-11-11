@@ -63,16 +63,16 @@ async def modificar_ruta_parcial(ruta_id: str, ruta: RutaActualizar, db: Session
     
     return Ruta.model_validate(ruta_dict)
 
-@router.get("/ruta/{ruta_placa}", response_model=Ruta, tags=["Rutas"])
-async def obtener_ruta(ruta_placa: str, db: Session = Depends(get_db)):
-    db_ruta = db.query(RutaModelo).filter(RutaModelo.placa == ruta_placa).first()
+@router.get("/ruta/{ruta_id}", response_model=Ruta, tags=["Rutas"])
+async def obtener_ruta(ruta_id: str, db: Session = Depends(get_db)):
+    db_ruta = db.query(RutaModelo).filter(RutaModelo.id == ruta_id).first()
     if not db_ruta:
         raise HTTPException(status_code=404, detail="Ruta no encontrado.")
     return Ruta.model_validate(db_ruta.__dict__)
 
 @router.delete("/ruta/{ruta_id}", response_model=dict, tags=["Rutas"])
 async def eliminar_ruta(ruta_id: str, db: Session = Depends(get_db)):
-    db_ruta = db.query(RutaModelo).filter(RutaModelo.placa == ruta_id).first()
+    db_ruta = db.query(RutaModelo).filter(RutaModelo.id == ruta_id).first()
     if not db_ruta:
         raise HTTPException(status_code=404, detail="Ruta no encontrada.")
     db.delete(db_ruta)

@@ -13,8 +13,8 @@ def crear_trayectos(trayectos: List[TrayectoCrear], db: Session = Depends(get_db
     db_trayectos = []
     for trayecto in trayectos:
         db_Trayecto = TrayectoModelo(**trayecto.model_dump())
-        db.add(db_trayectos)
-        db_trayectos.append(db_trayectos)
+        db.add(db_Trayecto)
+        db_trayectos.append(db_Trayecto)
     try:    
         db.commit()
     except IntegrityError:
@@ -66,14 +66,14 @@ async def modificar_trayecto_parcial(trayecto_id: str, trayecto: TrayectoActuali
 
 @router.get("/trayecto/{trayecto_id}", response_model=Trayecto, tags=["Trayectos"])
 async def obtener_trayecto(trayecto_id: str, db: Session = Depends(get_db)):
-    db_trayecto = db.query(TrayectoModelo).filter(TrayectoModelo.placa == trayecto_id).first()
+    db_trayecto = db.query(TrayectoModelo).filter(TrayectoModelo.id == trayecto_id).first()
     if not db_trayecto:
         raise HTTPException(status_code=404, detail="Trayecto no encontrado.")
     return Trayecto.model_validate(db_trayecto.__dict__)
 
 @router.delete("/trayecto/{trayecto_id}", response_model=dict, tags=["Trayectos"])
 async def eliminar_trayecto(trayecto_id: str, db: Session = Depends(get_db)):
-    db_trayecto = db.query(TrayectoModelo).filter(TrayectoModelo.placa == trayecto_id).first()
+    db_trayecto = db.query(TrayectoModelo).filter(TrayectoModelo.id == trayecto_id).first()
     if not db_trayecto:
         raise HTTPException(status_code=404, detail="Trayecto no encontrado.")
     db.delete(db_trayecto)

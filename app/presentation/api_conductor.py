@@ -63,16 +63,16 @@ async def modificar_conductor_parcial(conductor_id: str, conductor: ConductorAct
     
     return Conductor.model_validate(conductor_dict)
 
-@router.get("/conductor/{conductor_placa}", response_model=Conductor, tags=["Conductores"])
-async def obtener_conductor(conductor_placa: str, db: Session = Depends(get_db)):
-    db_conductor = db.query(ConductorModelo).filter(ConductorModelo.placa == conductor_placa).first()
+@router.get("/conductor/{conductor_id}", response_model=Conductor, tags=["Conductores"])
+async def obtener_conductor(conductor_id: str, db: Session = Depends(get_db)):
+    db_conductor = db.query(ConductorModelo).filter(ConductorModelo.id == conductor_id).first()
     if not db_conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado.")
     return Conductor.model_validate(db_conductor.__dict__)
 
 @router.delete("/conductor/{conductor_id}", response_model=dict, tags=["Conductores"])
 async def eliminar_conductor(conductor_id: str, db: Session = Depends(get_db)):
-    db_conductor = db.query(ConductorModelo).filter(ConductorModelo.placa == conductor_id).first()
+    db_conductor = db.query(ConductorModelo).filter(ConductorModelo.id == conductor_id).first()
     if not db_conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado.")
     db.delete(db_conductor)
