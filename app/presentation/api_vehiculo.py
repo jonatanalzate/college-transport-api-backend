@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.domain.models.vehiculo import Vehiculo as VehiculoModelo
 from app.domain.schemas.vehiculo_schemas import VehiculoCrear, Vehiculo, VehiculoActualizar
 from app.data.database import get_db
 from typing import List
+import csv
+from io import StringIO
 
 router = APIRouter()
 
@@ -21,6 +23,39 @@ def crear_vehiculos(vehiculos: List[VehiculoCrear], db: Session = Depends(get_db
         db.rollback()
         raise HTTPException(status_code=400, detail="Error: Placa duplicada.")        
     return db_vehiculos
+
+@router.post("/vehiculos/bulk", tags=["Vehiculo"])
+async def crear_vehiculos_bulk(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    contents = await file.read()
+    decoded_contents = contents.decode('utf-8')
+    csv_reader = csv.DictReader(StringIO(decoded_contents), delimiter=';')
+
+    db_vehiculos = []
+    errores = []
+
+    for row in csv_reader:
+        try:
+            db_vehiculo = VehiculoModelo(
+                marca=row['marca'],
+                placa=row['placa'],
+                modelo=row['modelo'],
+                lateral=row['lateral'],
+                año_de_fabricacion=int(row['año_de_fabricacion']),
+                capacidad_pasajeros=int(row['capacidad_pasajeros']),
+                estado_operativo=row['estado_operativo']
+            )
+            db.add(db_vehiculo)
+            db_vehiculos.append(db_vehiculo)
+        except Exception as e:
+            errores.append(f"Error al procesar el vehículo {row['placa']}: {str(e)}")
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Error: Placa duplicada.")
+
+    return {"vehiculos_insertados": len(db_vehiculos), "errores": errores}
 
 @router.get("/vehiculos/", response_model=List[Vehiculo], tags=["Vehiculo"])
 def leer_vehiculos(db: Session = Depends(get_db)):
