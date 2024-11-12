@@ -5,13 +5,63 @@ from app.domain.models.trayecto import Trayecto as TrayectoModelo
 from app.domain.schemas.trayecto_schemas import TrayectoCrear, Trayecto, TrayectoActualizar
 from app.data.database import get_db
 from typing import List
+from sqlalchemy.orm import joinedload
+from sqlalchemy import and_, or_
 
 router = APIRouter()
+
+def verificar_disponibilidad(db: Session, fecha, hora_salida, hora_llegada, conductor_id=None, vehiculo_id=None, trayecto_id=None):
+    """
+    Verifica si un conductor o vehículo está disponible en el horario especificado
+    """
+    query = db.query(TrayectoModelo).filter(
+        TrayectoModelo.fecha == fecha,
+        or_(
+            and_(
+                TrayectoModelo.hora_salida <= hora_llegada,
+                TrayectoModelo.hora_llegada >= hora_salida
+            )
+        )
+    )
+    
+    if conductor_id:
+        query = query.filter(TrayectoModelo.conductor_id == conductor_id)
+    
+    if vehiculo_id:
+        query = query.filter(TrayectoModelo.vehiculo_id == vehiculo_id)
+    
+    if trayecto_id:
+        query = query.filter(TrayectoModelo.id != trayecto_id)
+    
+    conflicto = query.first()
+    
+    if conflicto:
+        if conductor_id and conflicto.conductor_id == conductor_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El conductor ya está asignado a otro trayecto en ese horario (ID: {conflicto.id})"
+            )
+        if vehiculo_id and conflicto.vehiculo_id == vehiculo_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El vehículo ya está asignado a otro trayecto en ese horario (ID: {conflicto.id})"
+            )
 
 @router.post("/trayectos/", response_model=List[Trayecto], tags=["Trayectos"])
 def crear_trayectos(trayectos: List[TrayectoCrear], db: Session = Depends(get_db)): 
     db_trayectos = []
     for trayecto in trayectos:
+        # Verificar disponibilidad antes de crear
+        if trayecto.conductor_id or trayecto.vehiculo_id:
+            verificar_disponibilidad(
+                db,
+                trayecto.fecha,
+                trayecto.hora_salida,
+                trayecto.hora_llegada,
+                trayecto.conductor_id,
+                trayecto.vehiculo_id
+            )
+        
         db_Trayecto = TrayectoModelo(**trayecto.model_dump())
         db.add(db_Trayecto)
         db_trayectos.append(db_Trayecto)
@@ -24,19 +74,50 @@ def crear_trayectos(trayectos: List[TrayectoCrear], db: Session = Depends(get_db
 
 @router.get("/trayectos/", response_model=List[Trayecto], tags=["Trayectos"])
 def leer_trayectos(db: Session = Depends(get_db)):
-    trayectos = db.query(TrayectoModelo).all()
-    return [Trayecto.model_validate(trayecto.__dict__) for trayecto in trayectos]
+    trayectos = db.query(TrayectoModelo).options(
+        joinedload(TrayectoModelo.ruta),
+        joinedload(TrayectoModelo.conductor),
+        joinedload(TrayectoModelo.vehiculo)
+    ).all()
+    return trayectos
 
 @router.put("/trayecto/{trayecto_id}", response_model=Trayecto, tags=["Trayectos"])
-async def modificar_trayecto(trayecto_id: str, trayecto: Trayecto, db: Session = Depends(get_db)):
+async def modificar_trayecto(trayecto_id: str, trayecto: TrayectoCrear, db: Session = Depends(get_db)):
     db_trayecto = db.query(TrayectoModelo).filter(TrayectoModelo.id == trayecto_id).first()
     if not db_trayecto:
         raise HTTPException(status_code=404, detail="Trayecto no encontrado.")
+    
+    # Verificar disponibilidad antes de actualizar
+    if trayecto.conductor_id or trayecto.vehiculo_id:
+        verificar_disponibilidad(
+            db,
+            trayecto.fecha,
+            trayecto.hora_salida,
+            trayecto.hora_llegada,
+            trayecto.conductor_id,
+            trayecto.vehiculo_id,
+            trayecto_id  # Excluir el trayecto actual de la verificación
+        )
+    
+    # Actualizar los campos del trayecto
     for key, value in trayecto.model_dump().items():
         setattr(db_trayecto, key, value)
-    db.commit()
-    trayecto_dict = {k: getattr(db_trayecto, k) for k in Trayecto.model_fields.keys()}
-    return Trayecto.model_validate(db_trayecto.__dict__)
+    
+    try:
+        db.commit()
+        db.refresh(db_trayecto)
+        
+        # Cargar las relaciones
+        db_trayecto = db.query(TrayectoModelo).options(
+            joinedload(TrayectoModelo.ruta),
+            joinedload(TrayectoModelo.conductor),
+            joinedload(TrayectoModelo.vehiculo)
+        ).filter(TrayectoModelo.id == trayecto_id).first()
+        
+        return db_trayecto
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.patch("/trayecto/{trayecto_id}", response_model=Trayecto, tags=["Trayectos"])
 async def modificar_trayecto_parcial(trayecto_id: str, trayecto: TrayectoActualizar, db: Session = Depends(get_db)):
@@ -44,32 +125,36 @@ async def modificar_trayecto_parcial(trayecto_id: str, trayecto: TrayectoActuali
     if not db_trayecto:
         raise HTTPException(status_code=404, detail="Trayecto no encontrado.")
     
-    # Solo actualizar los campos que se envían en la solicitud
     for key, value in trayecto.model_dump(exclude_unset=True).items():
-        if value is not None:  # Asegúrate de que el valor no sea None
+        if value is not None:
             setattr(db_trayecto, key, value)
     
-    db.commit()
-    
-    # Crear un diccionario con los valores actualizados
-    trayecto_dict = {
-        "id": db_trayecto.id,
-        "fecha": db_trayecto.fecha,
-        "hora_salida": db_trayecto.hora_salida,
-        "hora_llegada": db_trayecto.hora_llegada,
-        "cantidad_pasajeros": db_trayecto.cantidad_pasajeros,
-        "kilometraje": db_trayecto.kilometraje,
-        "observaciones": db_trayecto.observaciones,
-    }
-    
-    return Trayecto.model_validate(trayecto_dict)
+    try:
+        db.commit()
+        db.refresh(db_trayecto)
+        
+        # Cargar las relaciones
+        db_trayecto = db.query(TrayectoModelo).options(
+            joinedload(TrayectoModelo.ruta),
+            joinedload(TrayectoModelo.conductor),
+            joinedload(TrayectoModelo.vehiculo)
+        ).filter(TrayectoModelo.id == trayecto_id).first()
+        
+        return db_trayecto
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/trayecto/{trayecto_id}", response_model=Trayecto, tags=["Trayectos"])
 async def obtener_trayecto(trayecto_id: str, db: Session = Depends(get_db)):
-    db_trayecto = db.query(TrayectoModelo).filter(TrayectoModelo.id == trayecto_id).first()
+    db_trayecto = db.query(TrayectoModelo).options(
+        joinedload(TrayectoModelo.ruta),
+        joinedload(TrayectoModelo.conductor),
+        joinedload(TrayectoModelo.vehiculo)
+    ).filter(TrayectoModelo.id == trayecto_id).first()
     if not db_trayecto:
         raise HTTPException(status_code=404, detail="Trayecto no encontrado.")
-    return Trayecto.model_validate(db_trayecto.__dict__)
+    return db_trayecto
 
 @router.delete("/trayecto/{trayecto_id}", response_model=dict, tags=["Trayectos"])
 async def eliminar_trayecto(trayecto_id: str, db: Session = Depends(get_db)):
