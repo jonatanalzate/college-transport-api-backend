@@ -1,8 +1,6 @@
 from sqlalchemy import Column, String
-from sqlalchemy.ext.declarative import declarative_base
+from app.data.database import Base
 import uuid
-
-Base = declarative_base()
 
 class Conductor(Base):
     __tablename__ = "conductores"

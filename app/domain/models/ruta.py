@@ -1,8 +1,7 @@
 from sqlalchemy import Column, String, Integer
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
+from app.data.database import Base
 import uuid
-
-Base = declarative_base()
 
 class Ruta(Base):
     __tablename__ = "rutas"
@@ -12,3 +11,4 @@ class Ruta(Base):
     origen = Column(String, nullable=False)
     destino = Column(String, nullable=False)
     duracion_estimada = Column(Integer, nullable=False)
+    trayectos = relationship("Trayecto", back_populates="ruta")
