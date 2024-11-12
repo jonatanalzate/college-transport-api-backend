@@ -17,7 +17,7 @@ ConductorBase.metadata.create_all(bind=engine)
 TrayectoBase.metadata.create_all(bind=engine)
 
 # Inicializar la aplicación FastAPI
-app = FastAPI()
+app = FastAPI(description="API para el transporte publico de Manizales")
 
 # Se agrega el middleware CORS en el backend para permitir las peticiones desde el frontend
 app.add_middleware(
