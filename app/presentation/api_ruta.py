@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+import csv
+from io import StringIO
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.domain.models.ruta import Ruta as RutaModelo
@@ -21,6 +23,37 @@ def crear_rutas(rutas: List[RutaCrear], db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail="Error: Ruta duplicada.")        
     return db_rutas
+
+@router.post("/rutas/bulk", tags=["Rutas"])
+async def crear_rutas_bulk(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    contents = await file.read()
+    decoded_contents = contents.decode('utf-8')
+    csv_reader = csv.DictReader(StringIO(decoded_contents), delimiter=';')
+
+    db_rutas = []
+    errores = []
+
+    for row in csv_reader:
+        try:
+            db_ruta = RutaModelo(
+                nombre=row['nombre'],
+                codigo=row['codigo'],
+                origen=row['origen'],
+                destino=row['destino'],
+                duracion_estimada=int(row['duracion_estimada']),
+            )
+            db.add(db_ruta)
+            db_rutas.append(db_ruta)
+        except Exception as e:
+            errores.append(f"Error al procesar la ruta {row['codigo']}: {str(e)}")
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Error: Ruta duplicada.")
+
+    return {"rutas_insertadas": len(db_rutas), "errores": errores}
 
 @router.get("/rutas/", response_model=List[Ruta], tags=["Rutas"])
 def leer_rutas(db: Session = Depends(get_db)):

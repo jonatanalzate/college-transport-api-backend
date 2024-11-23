@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+import csv
+from io import StringIO
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.domain.models.trayecto import Trayecto as TrayectoModelo
@@ -71,6 +73,48 @@ def crear_trayectos(trayectos: List[TrayectoCrear], db: Session = Depends(get_db
         db.rollback()
         raise HTTPException(status_code=400, detail="Error: Trayecto duplicado.")        
     return db_trayectos
+
+@router.post("/trayectos/bulk", tags=["Trayectos"])
+async def crear_trayectos_bulk(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    contents = await file.read()
+    decoded_contents = contents.decode('utf-8')
+    csv_reader = csv.DictReader(StringIO(decoded_contents), delimiter=';')
+
+    db_trayectos = []
+    errores = []
+
+    for row in csv_reader:
+        try:
+            # Verificar disponibilidad antes de crear
+            verificar_disponibilidad(
+                db,
+                row['fecha'],
+                row['hora_salida'],
+                row['hora_llegada'],
+                row.get('conductor_id'),
+                row.get('vehiculo_id')
+            )
+            db_trayecto = TrayectoModelo(
+                # Asigna los campos necesarios
+                fecha=row['fecha'],
+                hora_salida=row['hora_salida'],
+                hora_llegada=row['hora_llegada'],
+                conductor_id=row.get('conductor_id'),
+                vehiculo_id=row.get('vehiculo_id'),
+                ruta_id=row['ruta_id'],
+            )
+            db.add(db_trayecto)
+            db_trayectos.append(db_trayecto)
+        except Exception as e:
+            errores.append(f"Error al procesar el trayecto: {str(e)}")
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Error: Trayecto duplicado.")
+
+    return {"trayectos_insertados": len(db_trayectos), "errores": errores}
 
 @router.get("/trayectos/", response_model=List[Trayecto], tags=["Trayectos"])
 def leer_trayectos(db: Session = Depends(get_db)):

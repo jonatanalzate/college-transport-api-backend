@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+import csv
+from io import StringIO
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.domain.models.conductor import Conductor as ConductorModelo
@@ -21,6 +23,37 @@ def crear_conductores(conductores: List[ConductorCrear], db: Session = Depends(g
         db.rollback()
         raise HTTPException(status_code=400, detail="Error: Conductor duplicado.")        
     return db_conductores
+
+@router.post("/conductores/bulk", tags=["Conductores"])
+async def crear_conductores_bulk(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    contents = await file.read()
+    decoded_contents = contents.decode('utf-8')
+    csv_reader = csv.DictReader(StringIO(decoded_contents), delimiter=';')
+
+    db_conductores = []
+    errores = []
+
+    for row in csv_reader:
+        try:
+            db_conductor = ConductorModelo(
+                nombre=row['nombre'],
+                cedula=row['cedula'],
+                licencia=row['licencia'],
+                telefono=row['telefono'],
+                estado=row['estado'],
+            )
+            db.add(db_conductor)
+            db_conductores.append(db_conductor)
+        except Exception as e:
+            errores.append(f"Error al procesar el conductor {row['cedula']}: {str(e)}")
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Error: Conductor duplicado.")
+
+    return {"conductores_insertados": len(db_conductores), "errores": errores}
 
 @router.get("/conductores/", response_model=List[Conductor], tags=["Conductores"])
 def leer_conductores(db: Session = Depends(get_db)):
