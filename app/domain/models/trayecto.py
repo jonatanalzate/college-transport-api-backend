@@ -4,6 +4,7 @@ from app.data.database import Base
 from app.domain.models.ruta import Ruta
 from app.domain.models.conductor import Conductor
 from app.domain.models.vehiculo import Vehiculo
+from app.domain.models.empresa import Empresa
 import uuid
 
 class Trayecto(Base):
@@ -18,8 +19,10 @@ class Trayecto(Base):
     ruta_id = Column(String, ForeignKey("rutas.id"), nullable=True)
     conductor_id = Column(String, ForeignKey("conductores.id"), nullable=True)
     vehiculo_id = Column(String, ForeignKey("vehiculos.id"), nullable=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id"))
     
     # Relaciones
     ruta = relationship("Ruta", back_populates="trayectos")
     conductor = relationship("Conductor", foreign_keys=[conductor_id])
     vehiculo = relationship("Vehiculo", foreign_keys=[vehiculo_id])
+    empresa = relationship("Empresa", back_populates="trayectos")

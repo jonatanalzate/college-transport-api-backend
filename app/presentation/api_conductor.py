@@ -5,13 +5,18 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.domain.models.conductor import Conductor as ConductorModelo
 from app.domain.schemas.conductor_schemas import ConductorCrear, Conductor, ConductorActualizar
-from app.data.database import get_db
+from app.data.database import get_db_for_empresa
+from app.auth.security import get_current_empresa
+from app.domain.models.empresa import Empresa
 from typing import List
 
 router = APIRouter()
 
 @router.post("/conductores/", response_model=List[Conductor], tags=["Conductores"])
-def crear_conductores(conductores: List[ConductorCrear], db: Session = Depends(get_db)): 
+def crear_conductores(conductores: List[ConductorCrear],
+                       empresa_actual: Empresa = Depends(get_current_empresa),
+                       db: Session = Depends(get_db_for_empresa)):
+    db = get_db_for_empresa(empresa_actual.email)
     db_conductores = []
     for conductor in conductores:
         db_conductor = ConductorModelo(**conductor.model_dump())
@@ -25,7 +30,10 @@ def crear_conductores(conductores: List[ConductorCrear], db: Session = Depends(g
     return db_conductores
 
 @router.post("/conductores/bulk", tags=["Conductores"])
-async def crear_conductores_bulk(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def crear_conductores_bulk(file: UploadFile = File(...),
+                                   empresa_actual: Empresa = Depends(get_current_empresa),
+                                   db: Session = Depends(get_db_for_empresa)):
+    db = get_db_for_empresa(empresa_actual.email)
     contents = await file.read()
     decoded_contents = contents.decode('utf-8')
     csv_reader = csv.DictReader(StringIO(decoded_contents), delimiter=';')
@@ -56,12 +64,17 @@ async def crear_conductores_bulk(file: UploadFile = File(...), db: Session = Dep
     return {"conductores_insertados": len(db_conductores), "errores": errores}
 
 @router.get("/conductores/", response_model=List[Conductor], tags=["Conductores"])
-def leer_conductores(db: Session = Depends(get_db)):
+def leer_conductores(empresa_actual: Empresa = Depends(get_current_empresa),
+                      db: Session = Depends(get_db_for_empresa)):
+    db = get_db_for_empresa(empresa_actual.email)
     conductores = db.query(ConductorModelo).all()
     return [Conductor.model_validate(conductor.__dict__) for conductor in conductores]
 
 @router.put("/conductor/{conductor_id}", response_model=Conductor, tags=["Conductores"])
-async def modificar_conductor(conductor_id: str, conductor: Conductor, db: Session = Depends(get_db)):
+async def modificar_conductor(conductor_id: str, conductor: Conductor,
+                               empresa_actual: Empresa = Depends(get_current_empresa),
+                               db: Session = Depends(get_db_for_empresa)):
+    db = get_db_for_empresa(empresa_actual.email)
     db_conductor = db.query(ConductorModelo).filter(ConductorModelo.id == conductor_id).first()
     if not db_conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado.")
@@ -72,7 +85,10 @@ async def modificar_conductor(conductor_id: str, conductor: Conductor, db: Sessi
     return Conductor.model_validate(db_conductor.__dict__)
 
 @router.patch("/conductor/{conductor_id}", response_model=Conductor, tags=["Conductores"])
-async def modificar_conductor_parcial(conductor_id: str, conductor: ConductorActualizar, db: Session = Depends(get_db)):
+async def modificar_conductor_parcial(conductor_id: str, conductor: ConductorActualizar,
+                                       empresa_actual: Empresa = Depends(get_current_empresa),
+                                       db: Session = Depends(get_db_for_empresa)):
+    db = get_db_for_empresa(empresa_actual.email)
     db_conductor = db.query(ConductorModelo).filter(ConductorModelo.id == conductor_id).first()
     if not db_conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado.")
@@ -97,14 +113,20 @@ async def modificar_conductor_parcial(conductor_id: str, conductor: ConductorAct
     return Conductor.model_validate(conductor_dict)
 
 @router.get("/conductor/{conductor_id}", response_model=Conductor, tags=["Conductores"])
-async def obtener_conductor(conductor_id: str, db: Session = Depends(get_db)):
+async def obtener_conductor(conductor_id: str,
+                             empresa_actual: Empresa = Depends(get_current_empresa),
+                             db: Session = Depends(get_db_for_empresa)):
+    db = get_db_for_empresa(empresa_actual.email)
     db_conductor = db.query(ConductorModelo).filter(ConductorModelo.id == conductor_id).first()
     if not db_conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado.")
     return Conductor.model_validate(db_conductor.__dict__)
 
 @router.delete("/conductor/{conductor_id}", response_model=dict, tags=["Conductores"])
-async def eliminar_conductor(conductor_id: str, db: Session = Depends(get_db)):
+async def eliminar_conductor(conductor_id: str,
+                              empresa_actual: Empresa = Depends(get_current_empresa),
+                              db: Session = Depends(get_db_for_empresa)):
+    db = get_db_for_empresa(empresa_actual.email)
     db_conductor = db.query(ConductorModelo).filter(ConductorModelo.id == conductor_id).first()
     if not db_conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado.")

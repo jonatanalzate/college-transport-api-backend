@@ -3,15 +3,18 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.domain.models.vehiculo import Vehiculo as VehiculoModelo
 from app.domain.schemas.vehiculo_schemas import VehiculoCrear, Vehiculo, VehiculoActualizar
-from app.data.database import get_db
+from app.data.database import get_db_for_empresa
 from typing import List
 import csv
 from io import StringIO
+from app.auth.security import get_current_empresa
+from app.domain.models.empresa import Empresa
 
 router = APIRouter()
 
-@router.post("/vehiculos/", response_model=List[Vehiculo], tags=["Vehiculo"])
-def crear_vehiculos(vehiculos: List[VehiculoCrear], db: Session = Depends(get_db)): 
+@router.post("/vehiculos/", response_model=List[Vehiculo], tags=["Vehiculos"])
+def crear_vehiculos(vehiculos: List[VehiculoCrear], empresa_actual: Empresa = Depends(get_current_empresa), db: Session = Depends(get_db_for_empresa)):
+    db = get_db_for_empresa(empresa_actual.id)
     db_vehiculos = []
     for vehiculo in vehiculos:
         db_vehiculo = VehiculoModelo(**vehiculo.model_dump())
@@ -24,8 +27,8 @@ def crear_vehiculos(vehiculos: List[VehiculoCrear], db: Session = Depends(get_db
         raise HTTPException(status_code=400, detail="Error: Placa duplicada.")        
     return db_vehiculos
 
-@router.post("/vehiculos/bulk", tags=["Vehiculo"])
-async def crear_vehiculos_bulk(file: UploadFile = File(...), db: Session = Depends(get_db)):
+@router.post("/vehiculos/bulk", tags=["Vehiculos"])
+async def crear_vehiculos_bulk(file: UploadFile = File(...), db: Session = Depends(get_db_for_empresa)):
     contents = await file.read()
     decoded_contents = contents.decode('utf-8')
     csv_reader = csv.DictReader(StringIO(decoded_contents), delimiter=';')
@@ -57,13 +60,14 @@ async def crear_vehiculos_bulk(file: UploadFile = File(...), db: Session = Depen
 
     return {"vehiculos_insertados": len(db_vehiculos), "errores": errores}
 
-@router.get("/vehiculos/", response_model=List[Vehiculo], tags=["Vehiculo"])
-def leer_vehiculos(db: Session = Depends(get_db)):
-    vehiculos = db.query(VehiculoModelo).all()
-    return [Vehiculo.model_validate(vehiculo.__dict__) for vehiculo in vehiculos]
+@router.get("/vehiculos/", response_model=List[Vehiculo], tags=["Vehiculos"])
+def leer_vehiculos(empresa_actual: Empresa = Depends(get_current_empresa), 
+                 db: Session = Depends(get_db_for_empresa)):
+    db = get_db_for_empresa(empresa_actual.email)
+    return db.query(VehiculoModelo).all()
 
-@router.put("/vehiculo/{vehiculo_id}", response_model=Vehiculo, tags=["Vehiculo"])
-async def modificar_vehiculo(vehiculo_id: str, vehiculo: Vehiculo, db: Session = Depends(get_db)):
+@router.put("/vehiculo/{vehiculo_id}", response_model=Vehiculo, tags=["Vehiculos"])
+async def modificar_vehiculo(vehiculo_id: str, vehiculo: Vehiculo, empresa_actual: Empresa = Depends(get_current_empresa), db: Session = Depends(get_db_for_empresa)):
     db_vehiculo = db.query(VehiculoModelo).filter(VehiculoModelo.id == vehiculo_id).first()
     if not db_vehiculo:
         raise HTTPException(status_code=404, detail="Vehículo no encontrado.")
@@ -73,8 +77,8 @@ async def modificar_vehiculo(vehiculo_id: str, vehiculo: Vehiculo, db: Session =
     vehiculo_dict = {k: getattr(db_vehiculo, k) for k in Vehiculo.model_fields.keys()}
     return Vehiculo.model_validate(db_vehiculo.__dict__)
 
-@router.patch("/vehiculo/{vehiculo_id}", response_model=Vehiculo, tags=["Vehiculo"])
-async def modificar_vehiculo_parcial(vehiculo_id: str, vehiculo: VehiculoActualizar, db: Session = Depends(get_db)):
+@router.patch("/vehiculo/{vehiculo_id}", response_model=Vehiculo, tags=["Vehiculos"])
+async def actualizar_vehiculo_parcial(vehiculo_id: str, vehiculo: VehiculoActualizar, empresa_actual: Empresa = Depends(get_current_empresa), db: Session = Depends(get_db_for_empresa)):
     db_vehiculo = db.query(VehiculoModelo).filter(VehiculoModelo.id == vehiculo_id).first()
     if not db_vehiculo:
         raise HTTPException(status_code=404, detail="Vehículo no encontrado.")
@@ -100,15 +104,15 @@ async def modificar_vehiculo_parcial(vehiculo_id: str, vehiculo: VehiculoActuali
     
     return Vehiculo.model_validate(vehiculo_dict)
 
-@router.get("/vehiculo/{vehiculo_placa}", response_model=Vehiculo, tags=["Vehiculo"])
-async def obtener_vehiculo(vehiculo_placa: str, db: Session = Depends(get_db)):
+@router.get("/vehiculo/{vehiculo_placa}", response_model=Vehiculo, tags=["Vehiculos"])
+async def leer_vehiculo(vehiculo_placa: str, empresa_actual: Empresa = Depends(get_current_empresa), db: Session = Depends(get_db_for_empresa)):
     db_vehiculo = db.query(VehiculoModelo).filter(VehiculoModelo.placa == vehiculo_placa).first()
     if not db_vehiculo:
         raise HTTPException(status_code=404, detail="Vehículo no encontrado.")
     return Vehiculo.model_validate(db_vehiculo.__dict__)
 
-@router.delete("/vehiculo/{vehiculo_id}", response_model=dict, tags=["Vehiculo"])
-async def eliminar_vehiculo(vehiculo_id: str, db: Session = Depends(get_db)):
+@router.delete("/vehiculo/{vehiculo_id}", response_model=dict, tags=["Vehiculos"])
+async def eliminar_vehiculo(vehiculo_id: str, empresa_actual: Empresa = Depends(get_current_empresa), db: Session = Depends(get_db_for_empresa)):
     db_vehiculo = db.query(VehiculoModelo).filter(VehiculoModelo.id == vehiculo_id).first()
     if not db_vehiculo:
         raise HTTPException(status_code=404, detail="Vehículo no encontrado.")

@@ -31,3 +31,14 @@ Casos de Uso:
     •	Caso de Uso: Modificar vehículo
     •	Caso de Uso: Eliminar vehículo
     •	Caso de Uso: Obtener vehículo
+
+Dependencias adicionales:
+
+fastapi>=0.68.0,<0.69.0
+pydantic>=1.8.0,<2.0.0
+sqlalchemy>=1.4.0,<2.0.0
+uvicorn>=0.15.0,<0.16.0
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+email-validator

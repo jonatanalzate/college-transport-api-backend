@@ -1,4 +1,5 @@
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Integer, ForeignKey
+from sqlalchemy.orm import relationship
 from app.data.database import Base
 import uuid
 
@@ -10,3 +11,5 @@ class Conductor(Base):
     licencia = Column(String, nullable=False)
     telefono = Column(String, nullable=False)
     estado = Column(String, nullable=False)
+    empresa_id = Column(Integer, ForeignKey("empresas.id"))
+    empresa = relationship("Empresa", back_populates="conductores")

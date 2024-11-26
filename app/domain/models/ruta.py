@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer
+from sqlalchemy import Column, String, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from app.data.database import Base
 import uuid
@@ -12,3 +12,5 @@ class Ruta(Base):
     destino = Column(String, nullable=False)
     duracion_estimada = Column(Integer, nullable=False)
     trayectos = relationship("Trayecto", back_populates="ruta")
+    empresa_id = Column(Integer, ForeignKey("empresas.id"))
+    empresa = relationship("Empresa", back_populates="rutas")
