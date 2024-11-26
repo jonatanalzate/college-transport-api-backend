@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.domain.models.vehiculo import Vehiculo as VehiculoModelo
