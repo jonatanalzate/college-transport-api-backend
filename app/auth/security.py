@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.data.database import get_db, get_db_for_empresa
 from app.domain.models.empresa import Empresa
+from app.domain.models.usuario import Usuario
 
 # Configuración de seguridad
 SECRET_KEY = "tu_clave_secreta_muy_segura"  # Cambiar en producción
@@ -81,3 +82,34 @@ async def get_current_empresa(token: str = Depends(oauth2_scheme),
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error inesperado: {str(e)}"
         )
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> Usuario:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No se pudieron validar las credenciales",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+            
+        # Buscar el usuario por email
+        usuario = db.query(Usuario).filter(Usuario.email == email).first()
+        if usuario is None:
+            raise credentials_exception
+            
+        if not usuario.activo:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Usuario inactivo"
+            )
+            
+        return usuario
+        
+    except JWTError:
+        raise credentials_exception
