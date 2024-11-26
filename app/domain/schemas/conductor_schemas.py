@@ -1,20 +1,22 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
-class ConductorCrear(BaseModel):
+class ConductorBase(BaseModel):
     nombre: str
     cedula: str
     licencia: str
     telefono: str
-    estado: int
+    estado: str
 
-class Conductor(BaseModel):
+class ConductorCrear(ConductorBase):
+    pass
+
+class Conductor(ConductorBase):
     id: str
-    nombre: str
-    cedula: str
-    licencia: str
-    telefono: str
-    estado: str 
+    empresa_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
 
 class ConductorActualizar(BaseModel):
     nombre: Optional[str] = None

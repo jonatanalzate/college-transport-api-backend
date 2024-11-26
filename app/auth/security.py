@@ -40,17 +40,44 @@ async def get_current_empresa(token: str = Depends(oauth2_scheme),
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
+        # Decodificar el token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    
-    empresa = db.query(Empresa).filter(Empresa.email == email).first()
-    if empresa is None:
-        raise credentials_exception
-    
-    # Asegurarse de que estamos usando la base de datos correcta
-    empresa.db = get_db_for_empresa(empresa.email)
-    return empresa
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Email no encontrado en el token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+            
+        # Buscar la empresa
+        empresa = db.query(Empresa).filter(Empresa.email == email).first()
+        if empresa is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Empresa no encontrada para el email: {email}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Obtener la base de datos específica de la empresa
+        try:
+            empresa.db = next(get_db_for_empresa(empresa.email))
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error al obtener la base de datos de la empresa: {str(e)}"
+            )
+            
+        return empresa
+        
+    except JWTError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Error al decodificar el token: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error inesperado: {str(e)}"
+        )

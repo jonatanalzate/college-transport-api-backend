@@ -1,7 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
-class VehiculoCrear(BaseModel):
+class VehiculoBase(BaseModel):
     marca: str
     placa: str
     modelo: str
@@ -10,15 +10,15 @@ class VehiculoCrear(BaseModel):
     capacidad_pasajeros: int
     estado_operativo: str
 
-class Vehiculo(BaseModel):
+class VehiculoCrear(VehiculoBase):
+    pass
+
+class Vehiculo(VehiculoBase):
     id: str
-    marca: str
-    placa: str
-    modelo: str
-    lateral: str
-    año_de_fabricacion: int
-    capacidad_pasajeros: int
-    estado_operativo: str
+    empresa_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
 
 class VehiculoActualizar(BaseModel):
     marca: Optional[str] = None

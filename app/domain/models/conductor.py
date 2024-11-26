@@ -11,5 +11,5 @@ class Conductor(Base):
     licencia = Column(String, nullable=False)
     telefono = Column(String, nullable=False)
     estado = Column(String, nullable=False)
-    empresa_id = Column(Integer, ForeignKey("empresas.id"))
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
     empresa = relationship("Empresa", back_populates="conductores")

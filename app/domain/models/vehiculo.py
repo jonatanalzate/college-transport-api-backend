@@ -13,5 +13,5 @@ class Vehiculo(Base):
     año_de_fabricacion = Column(Integer, nullable=False)
     capacidad_pasajeros = Column(Integer, nullable=False)
     estado_operativo = Column(String, nullable=False)
-    empresa_id = Column(Integer, ForeignKey("empresas.id"))
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
     empresa = relationship("Empresa", back_populates="vehiculos")

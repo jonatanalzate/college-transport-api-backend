@@ -1,37 +1,55 @@
-import csv
-from io import StringIO
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+import logging
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.domain.models.ruta import Ruta as RutaModelo
 from app.domain.schemas.ruta_schemas import RutaCrear, Ruta, RutaActualizar
-from app.data.database import get_db_for_empresa
 from app.auth.security import get_current_empresa
 from app.domain.models.empresa import Empresa
 from typing import List
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post("/rutas/", response_model=Ruta, tags=["Rutas"])
-def crear_ruta(ruta: RutaCrear, 
-               empresa_actual: Empresa = Depends(get_current_empresa),
-               db: Session = Depends(get_db_for_empresa)):
-    db = get_db_for_empresa(empresa_actual.email)
-    db_ruta = RutaModelo(**ruta.model_dump())
-    db.add(db_ruta)
-    db.commit()
-    db.refresh(db_ruta)
-    return db_ruta
+def crear_ruta(ruta: RutaCrear, empresa_actual: Empresa = Depends(get_current_empresa)):
+    try:
+        db = empresa_actual.db
+        db_ruta = RutaModelo(**ruta.model_dump(), empresa_id=empresa_actual.id)
+        db.add(db_ruta)
+        db.commit()
+        db.refresh(db_ruta)
+        return db_ruta
+    except Exception as e:
+        logger.error(f"Error al crear ruta: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al crear ruta: {str(e)}"
+        )
+
+@router.get("/rutas/", response_model=List[Ruta], tags=["Rutas"])
+def leer_rutas(empresa_actual: Empresa = Depends(get_current_empresa)):
+    try:
+        db = empresa_actual.db
+        rutas = db.query(RutaModelo).filter(
+            RutaModelo.empresa_id == empresa_actual.id
+        ).all()
+        return rutas
+    except Exception as e:
+        logger.error(f"Error al obtener rutas: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener rutas: {str(e)}"
+        )
 
 @router.post("/rutas/bulk", tags=["Rutas"])
 async def crear_rutas_bulk(file: UploadFile = File(...), 
-                            empresa_actual: Empresa = Depends(get_current_empresa),
-                            db: Session = Depends(get_db_for_empresa)):
+                            empresa_actual: Empresa = Depends(get_current_empresa)):
     contents = await file.read()
     decoded_contents = contents.decode('utf-8')
     csv_reader = csv.DictReader(StringIO(decoded_contents), delimiter=';')
 
-    db = get_db_for_empresa(empresa_actual.email)
+    db = empresa_actual.db
     db_rutas = []
     errores = []
 
@@ -57,17 +75,10 @@ async def crear_rutas_bulk(file: UploadFile = File(...),
 
     return {"rutas_insertadas": len(db_rutas), "errores": errores}
 
-@router.get("/rutas/", response_model=List[Ruta], tags=["Rutas"])
-def leer_rutas(empresa_actual: Empresa = Depends(get_current_empresa),
-               db: Session = Depends(get_db_for_empresa)):
-    db = get_db_for_empresa(empresa_actual.email)
-    return db.query(RutaModelo).all()
-
 @router.put("/ruta/{ruta_id}", response_model=Ruta, tags=["Rutas"])
 async def modificar_ruta(ruta_id: str, ruta: Ruta, 
-                          empresa_actual: Empresa = Depends(get_current_empresa),
-                          db: Session = Depends(get_db_for_empresa)):
-    db = get_db_for_empresa(empresa_actual.email)
+                          empresa_actual: Empresa = Depends(get_current_empresa)):
+    db = empresa_actual.db
     db_ruta = db.query(RutaModelo).filter(RutaModelo.id == ruta_id).first()
     if not db_ruta:
         raise HTTPException(status_code=404, detail="Ruta no encontrada.")
@@ -79,9 +90,8 @@ async def modificar_ruta(ruta_id: str, ruta: Ruta,
 
 @router.patch("/ruta/{ruta_id}", response_model=Ruta, tags=["Rutas"])
 async def modificar_ruta_parcial(ruta_id: str, ruta: RutaActualizar, 
-                                  empresa_actual: Empresa = Depends(get_current_empresa),
-                                  db: Session = Depends(get_db_for_empresa)):
-    db = get_db_for_empresa(empresa_actual.email)
+                                  empresa_actual: Empresa = Depends(get_current_empresa)):
+    db = empresa_actual.db
     db_ruta = db.query(RutaModelo).filter(RutaModelo.id == ruta_id).first()
     if not db_ruta:
         raise HTTPException(status_code=404, detail="Ruta no encontrada.")
@@ -107,9 +117,8 @@ async def modificar_ruta_parcial(ruta_id: str, ruta: RutaActualizar,
 
 @router.get("/ruta/{ruta_id}", response_model=Ruta, tags=["Rutas"])
 async def leer_ruta(ruta_id: str,
-                   empresa_actual: Empresa = Depends(get_current_empresa),
-                   db: Session = Depends(get_db_for_empresa)):
-    db = get_db_for_empresa(empresa_actual.email)
+                   empresa_actual: Empresa = Depends(get_current_empresa)):
+    db = empresa_actual.db
     db_ruta = db.query(RutaModelo).filter(RutaModelo.id == ruta_id).first()
     if not db_ruta:
         raise HTTPException(status_code=404, detail="Ruta no encontrado.")
@@ -117,9 +126,8 @@ async def leer_ruta(ruta_id: str,
 
 @router.delete("/ruta/{ruta_id}", response_model=dict, tags=["Rutas"])
 async def eliminar_ruta(ruta_id: str, 
-                          empresa_actual: Empresa = Depends(get_current_empresa),
-                          db: Session = Depends(get_db_for_empresa)):
-    db = get_db_for_empresa(empresa_actual.email)
+                          empresa_actual: Empresa = Depends(get_current_empresa)):
+    db = empresa_actual.db
     db_ruta = db.query(RutaModelo).filter(RutaModelo.id == ruta_id).first()
     if not db_ruta:
         raise HTTPException(status_code=404, detail="Ruta no encontrada.")
